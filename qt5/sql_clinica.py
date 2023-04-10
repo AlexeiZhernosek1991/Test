@@ -17,12 +17,51 @@ con = sl.connect('clinic.db')
 #     print(data.fetchall())
 #     # fetchone
 
+# INSERT INTO Goods (good_id, good_name, type)
+# VALUES (20, 'Table', 2);
+
+def insert_row(table_name: str, change_dict: dict):
+    try:
+        sql_1 = f"INSERT INTO {table_name} ("
+        sql_2 = 'VALUES ('
+        for d, s in list(change_dict.items()):
+            if type(s) == str:
+                sql_2 += f'"{s}",'
+            else:
+                sql_2 += f'{s},'
+            sql_1 += f'{d},'
+        sql_insert = f'{sql_1[:-1]}) {sql_2[:-1]})'
+        print(sql_insert)
+        con.execute(sql_insert)
+        return True
+    except Exception as f:
+        print(f)
+        return False
+
+
 def Select_tabl(tabl):
     with con:
         data = con.execute(f"SELECT * FROM {tabl}")
         data = data.fetchall()
         print(data)
         return data
+
+
+def select_info(sel: str):
+    with con:
+        data = con.execute(sel)
+        data = data.fetchall()
+        data = str(data).replace('(', "'").replace(',)', "'")
+        data = eval(data)
+        print(data)
+        return data
+
+
+def info_table(tabl):
+    with con:
+        name_colum = con.execute(f"PRAGMA table_info ({tabl})")
+        name_colum = name_colum.fetchall()
+    return name_colum
 
 
 def name_colum_tabl(tabl):
@@ -49,14 +88,18 @@ def Add_doctor(doc_info: list):
 def update_new(tabl, info_new: dict):
     try:
         sqlite_update_query = f"Update {tabl} set"
-        columnValues = tuple(info_new.values())[1:]
-        for d in info_new:
-            sqlite_update_query = f'{sqlite_update_query} {d}=?,'
+        for d, s in list(info_new.items())[:-1]:
+            if type(s) == str:
+                sqlite_update_query = f'{sqlite_update_query} {d}="{s}",'
+            else:
+                sqlite_update_query = f'{sqlite_update_query} {d}={s},'
         sqlite_update_query = sqlite_update_query[:-1]
-        sqlite_update_query = f'{sqlite_update_query} WHERE id =?'
-        con.execute(sqlite_update_query, columnValues)
+        sqlite_update_query = f'{sqlite_update_query} WHERE id ={info_new["id"]}'
+        print(sqlite_update_query)
+        con.execute(sqlite_update_query)
         return True
-    except:
+    except Exception as f:
+        print(f)
         return False
 
 
@@ -99,11 +142,8 @@ def all_service_doctor(doctor_id):
 
 
 def delete_row_table(tabl, id_list):
-    if len(id_list) < 2:
+    if len(id_list) == 1:
         id_list.append(id_list[0])
     with con:
         a = f'DELETE FROM {tabl} WHERE id IN {tuple(id_list)}'
         con.execute(a)
-
-
-

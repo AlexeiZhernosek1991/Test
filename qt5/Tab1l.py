@@ -12,7 +12,7 @@ from functools import partial
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QTableWidgetItem
-from sql_clinica import Select_tabl, name_colum_tabl, delete_row_table
+from sql_clinica import Select_tabl, name_colum_tabl, delete_row_table, update_new
 import Appv2
 
 fio_dict = {'colum': 21, 'row': 55}
@@ -21,6 +21,10 @@ fio_dict = {'colum': 21, 'row': 55}
 class Ui_Dialog(object):
     table_name = ''
     change_delete = []
+    change_items = []
+    name_colum_bd = []
+    change_dict = {}
+
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
         Dialog.resize(933, 590)
@@ -44,8 +48,9 @@ class Ui_Dialog(object):
         self.pushButton_4.setEnabled(False)
         self.pushButton_4.setGeometry(QtCore.QRect(762, 477, 121, 41))
         self.pushButton_4.setObjectName("pushButton_4")
-
-
+        self.pushButton_5 = QtWidgets.QPushButton(Dialog)
+        self.pushButton_5.setGeometry(QtCore.QRect(762, 400, 121, 41))
+        self.pushButton_5.setObjectName("pushButton_5")
 
         self.retranslateUi(Dialog)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
@@ -57,11 +62,13 @@ class Ui_Dialog(object):
         self.pushButton_2.setText(_translate("Dialog", "-"))
         self.pushButton_3.setText(_translate("Dialog", "Отменить"))
         self.pushButton_4.setText(_translate("Dialog", "Применить"))
+        self.pushButton_5.setText(_translate("Dialog", "Обновить"))
         self.pushButton.clicked.connect(self.add_row)
         self.pushButton_2.clicked.connect(self.delete_row)
         self.pushButton_3.clicked.connect(self.cancellation)
         self.pushButton_4.clicked.connect(self.save_change)
-        self.tableWidget.itemDoubleClicked.connect(self.activ_but)
+        self.pushButton_5.clicked.connect(self.update_tabl)
+        self.tableWidget.itemDoubleClicked.connect(self.change_item)
 
     def tabl_gen(self, tabl_name):
         self.table_name = tabl_name
@@ -82,6 +89,7 @@ class Ui_Dialog(object):
         Dialog = QtWidgets.QDialog()
         ui2 = Appv2.Ui_Dialog()
         ui2.setupUi(Dialog)
+        ui2.line_gen(self.table_name, Dialog)
         Dialog.show()
         Dialog.exec_()
 
@@ -101,7 +109,7 @@ class Ui_Dialog(object):
             x = 0
             for row__ in list_id_row_tabl:
                 self.tableWidget.removeRow(row__ - x)
-                self.lineEdit.setText(f'Удалена стока {row__+1}')
+                self.lineEdit.setText(f'Удалена стока {row__ + 1}')
                 x += 1
             self.change_delete.extend(list_id_row)
             self.activ_but()
@@ -113,17 +121,55 @@ class Ui_Dialog(object):
         self.pushButton_4.setEnabled(True)
 
     def save_change(self):
-        if len(self.change_delete) > 0:
-            delete_row_table(self.table_name, self.change_delete)
-            self.change_delete = []
-            self.lineEdit.setText('Изменения приняты')
-            self.pushButton_3.setEnabled(False)
-            self.pushButton_4.setEnabled(False)
-
+        # try:
+            if len(self.change_delete) > 0:
+                delete_row_table(self.table_name, self.change_delete)
+                self.change_delete = []
+                self.lineEdit.setText('Строки удалены')
+                self.pushButton_3.setEnabled(False)
+                self.pushButton_4.setEnabled(False)
+            else:
+                pass
+            if self.change_dict != {}:
+                self.apply_change()
+                self.change_dict = {}
+                self.lineEdit.setText('Изменения приняты')
+                self.pushButton_3.setEnabled(False)
+                self.pushButton_4.setEnabled(False)
+            else:
+                pass
+        # except Exception as e:
+        #     print(e)
 
     def cancellation(self):
         self.tabl_gen(self.table_name)
         self.change_delete = []
+        self.change_dict = []
         self.lineEdit.setText('Изменения отменены')
         self.pushButton_3.setEnabled(False)
         self.pushButton_4.setEnabled(False)
+
+    def update_tabl(self):
+        self.tabl_gen(self.table_name)
+
+    def change_item(self):
+        self.activ_but()
+        change_item = self.tableWidget.currentItem()
+        row_item = str(change_item.row())
+        col_item = change_item.column()
+        if row_item in self.change_dict:
+            self.change_dict[row_item].append(col_item)
+        else:
+            self.change_dict.setdefault(row_item, [])
+            self.change_dict[row_item].append(col_item)
+
+    def apply_change(self):
+        self.name_colum_bd = name_colum_tabl(self.table_name)
+        for row_, name_cols in self.change_dict.items():
+            dict_change = {}
+            for col_ in name_cols:
+                dict_change.setdefault(self.name_colum_bd[col_],
+                                       self.tableWidget.item(int(row_), col_).text())
+            dict_change.setdefault('id', self.tableWidget.item(int(row_), 0).text())
+            print(dict_change)
+            update_new(self.table_name, dict_change)

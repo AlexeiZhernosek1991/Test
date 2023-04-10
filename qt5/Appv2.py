@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import datetime
+import time
 
 # Form implementation generated from reading ui file 'Append.ui'
 #
@@ -10,30 +12,24 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+from qt5.config_dict import FIO_dict, Clients_dict, Services_dict, Staff_dict, Finish_services_dict
+from sql_clinica import info_table, select_info, insert_row
 
 
 class Ui_Dialog(object):
+    tabl_name = ''
+    create_row_dict = {}
+    create_row_list = []
+
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
-        Dialog.resize(933, 590)
-        self.dateTimeEdit = QtWidgets.QDateTimeEdit(Dialog)
-        self.dateTimeEdit.setGeometry(QtCore.QRect(70, 160, 194, 22))
-        self.dateTimeEdit.setObjectName("dateTimeEdit")
-        self.lineEdit = QtWidgets.QLineEdit(Dialog)
-        self.lineEdit.setGeometry(QtCore.QRect(70, 70, 113, 22))
-        self.lineEdit.setObjectName("lineEdit")
-        self.fontComboBox = QtWidgets.QFontComboBox(Dialog)
-        self.fontComboBox.setGeometry(QtCore.QRect(70, 240, 226, 22))
-        self.fontComboBox.setObjectName("fontComboBox")
-        self.timeEdit = QtWidgets.QTimeEdit(Dialog)
-        self.timeEdit.setGeometry(QtCore.QRect(70, 120, 118, 22))
-        self.timeEdit.setObjectName("timeEdit")
-        self.dateEdit = QtWidgets.QDateEdit(Dialog)
-        self.dateEdit.setGeometry(QtCore.QRect(70, 200, 110, 22))
-        self.dateEdit.setObjectName("dateEdit")
+        Dialog.resize(1000, 600)
         self.pushButton = QtWidgets.QPushButton(Dialog)
         self.pushButton.setGeometry(QtCore.QRect(730, 427, 141, 71))
         self.pushButton.setObjectName("pushButton")
+        self.pushButton_2 = QtWidgets.QPushButton(Dialog)
+        self.pushButton_2.setGeometry(QtCore.QRect(500, 427, 141, 71))
+        self.pushButton_2.setObjectName("pushButton")
 
         self.retranslateUi(Dialog)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
@@ -41,13 +37,88 @@ class Ui_Dialog(object):
     def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
         Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
-        self.pushButton.setText(_translate("Dialog", "PUSH"))
+        self.pushButton.setText(_translate("Dialog", "Добавить"))
+        self.pushButton_2.setText(_translate("Dialog", "Закрыть"))
+        self.pushButton.clicked.connect(self.create_row)
+        self.pushButton_2.clicked.connect(Dialog.close)
 
-    def create_row(self, flag):
+    def line_gen(self, name, Dialog):
+        self.tabl_name = name
+        name_config_dict = globals()[f'{name}_dict']
+        print(name_config_dict)
+        h = 0
+        for colum_, type_ in name_config_dict.items():
+            if type_['type'] == 'TEXT':
+                setattr(self, f'label{colum_}', QtWidgets.QLabel(Dialog))
+                lab_ = getattr(self, f'label{colum_}')
+                lab_.setText(f'{colum_}')
+                lab_.setGeometry(70, 140 + h, 150, 22)
+                setattr(self, colum_, QtWidgets.QTextEdit(Dialog))
+                text_ = getattr(self, colum_)
+                text_.setGeometry(70, 160 + h, 194, 22)
+            elif type_['type'] == 'DATE':
+                setattr(self, f'label{colum_}', QtWidgets.QLabel(Dialog))
+                lab_ = getattr(self, f'label{colum_}')
+                lab_.setText(f'{colum_}')
+                lab_.setGeometry(70, 140 + h, 150, 22)
+                setattr(self, colum_, QtWidgets.QDateEdit(Dialog))
+                text_ = getattr(self, colum_)
+                text_.setGeometry(70, 160 + h, 194, 22)
+            elif type_['type'] == 'DATETIME':
+                setattr(self, f'label{colum_}', QtWidgets.QLabel(Dialog))
+                lab_ = getattr(self, f'label{colum_}')
+                lab_.setText(f'{colum_}')
+                lab_.setGeometry(70, 140 + h, 150, 22)
+                setattr(self, colum_, QtWidgets.QDateTimeEdit(Dialog))
+                text_ = getattr(self, colum_)
+                text_.setGeometry(70, 160 + h, 194, 22)
+            elif type_['type'] == 'COMBO':
+                setattr(self, f'label{colum_}', QtWidgets.QLabel(Dialog))
+                lab_ = getattr(self, f'label{colum_}')
+                lab_.setText(f'{colum_}')
+                lab_.setGeometry(70, 140 + h, 150, 22)
+                setattr(self, colum_, QtWidgets.QComboBox(Dialog))
+                text_ = getattr(self, colum_)
+                text_.setGeometry(70, 160 + h, 194, 22)
+                text_.setEditable(True)
+                list_combobox = list(select_info(type_['SQL']))
+                text_.addItems(list_combobox)
+            h += 50
+            # ВТОРОЙ ВАРИАНТ ИСПОЛНЕНИЯ
+            # for colum_, type_ in name_config_dict.items():
+            # if type_ == 'TEXT':
+            #     globals()[f'self.{colum_}'] = QtWidgets.QLineEdit(Dialog).setGeometry(70, 160 + h, 194, 22)
+            # elif type_ == 'DATE':
+            #     globals()[f'self.{colum_}'] = QtWidgets.QDateEdit(Dialog).setGeometry(70, 160 + h, 194, 22)
+            # elif type_ == 'DATETIME':
+            #     globals()[f'self.{colum_}'] = QtWidgets.QDateTimeEdit(Dialog).setGeometry(70, 160 + h, 194, 22)
+            # elif type_ == 'CHECKBOX':
+            #     list_keys = name_config_dict.keys()
+        #     else:
+        #         pass
+        # h += 50
+        # timefinish = time.time()
+        # print(timestart - timefinish)
 
-        pass
-
-    def push_new_row(self):
-        pass
+    def create_row(self):
+        name_config_dict = globals()[f'{self.tabl_name}_dict']
+        add_row_dict = {}
+        for colum_, type_ in name_config_dict.items():
+            if type_['type'] == 'TEXT':
+                get_val = getattr(self, colum_)
+                add_row_dict.setdefault(colum_, get_val.toPlainText())
+            elif type_['type'] == 'DATE':
+                get_val = getattr(self, colum_)
+                add_row_dict.setdefault(colum_, get_val.date().toString('yyyy-MM-dd'))
+            elif type_['type'] == 'DATETIME':
+                get_val = getattr(self, colum_)
+                add_row_dict.setdefault(colum_, get_val.dateTime().toString("yyyy.MM.dd HH:mm"))
+            elif type_['type'] == 'COMBO':
+                get_val = getattr(self, colum_)
+                add_row_dict.setdefault(colum_, get_val.currentText())
+            else:
+                pass
+        print(add_row_dict)
+        insert_row(self.tabl_name, add_row_dict)
 
 
